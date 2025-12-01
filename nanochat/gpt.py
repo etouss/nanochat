@@ -127,12 +127,12 @@ class ResidualMLP(nn.Module):
         super().__init__()
         self.n_embd = config.n_embd
         self.c_fc = nn.Linear(config.n_embd, 8 * config.n_embd, bias=False)
-        self.c_proj = nn.Linear(8 * config.n_embd, 4*config.n_embd, bias=False)
+        self.c_proj = nn.Linear(8 * config.n_embd, 2*config.n_embd, bias=False)
 
     def forward(self, x):
         x = self.c_fc(x)
         x = F.relu(x).square()
-        x,y = self.c_proj(x).split(self.n_embd, dim=2)
+        x, y = self.c_proj(x).split(self.n_embd, dim=2)
         return x,y
 
 
