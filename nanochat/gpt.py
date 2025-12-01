@@ -155,8 +155,8 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x, cos_sin, kv_cache):
         x = x + self.attn(norm(x), cos_sin, kv_cache)
-        x,y = x + self.mlp(norm(x))
-        return x,y
+        y,z = self.mlp(norm(x))
+        return y+x,z
 
 
 class GPT(nn.Module):
