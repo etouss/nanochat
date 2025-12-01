@@ -38,7 +38,7 @@ device_type = "" # cuda|cpu|mps (empty => autodetect good device type default, i
 depth = 8 # the depth of the Transformer model to train, rest of the kwargs are derived
 max_seq_len = 512 # max context length
 # Training horizon. Only one of these 3 will be used, in this order of precedence.
-num_iterations = 80 # explicit number of steps of the optimization (-1 = disable)
+num_iterations = -1 # explicit number of steps of the optimization (-1 = disable)
 target_flops = -1.0 # calculate num_iterations to reach target_flops. Useful for scaling laws experiments (-1 = disable)
 target_param_data_ratio = 20 # calculate num_iterations to maintain fixed data:param ratio (Chinchilla=20) (-1 = disable)
 # Optimization
