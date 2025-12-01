@@ -122,6 +122,19 @@ class MLP(nn.Module):
         x = self.c_proj(x)
         return x
 
+class ResidualMLP(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.n_embd = config.n_embd
+        self.c_fc = nn.Linear(config.n_embd, 8 * config.n_embd, bias=False)
+        self.c_proj = nn.Linear(8 * config.n_embd, 4*config.n_embd, bias=False)
+
+    def forward(self, x):
+        x = self.c_fc(x)
+        x = F.relu(x).square()
+        x,y = self.c_proj(x).split(self.n_embd, dim=2)
+        return x,y
+
 
 class Block(nn.Module):
     def __init__(self, config, layer_idx):
@@ -134,6 +147,17 @@ class Block(nn.Module):
         x = x + self.mlp(norm(x))
         return x
 
+class ResidualBlock(nn.Module):
+    def __init__(self, config, layer_idx):
+        super().__init__()
+        self.attn = CausalSelfAttention(config, layer_idx)
+        self.mlp = ResidualMLP(config)
+
+    def forward(self, x, cos_sin, kv_cache):
+        x = x + self.attn(norm(x), cos_sin, kv_cache)
+        x,y = x + self.mlp(norm(x))
+        return x,y
+
 
 class GPT(nn.Module):
     def __init__(self, config):
@@ -141,8 +165,9 @@ class GPT(nn.Module):
         self.config = config
         self.transformer = nn.ModuleDict({
             "wte": nn.Embedding(config.vocab_size, config.n_embd),
-            "h": nn.ModuleList([Block(config, layer_idx) for layer_idx in range(config.n_layer)]),
+            "h": nn.ModuleList([Block(config, layer_idx) for layer_idx in range(config.n_layer-1)]),
         })
+        self.residual_block = ResidualBlock(config, config.n_layer-1)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         # To support meta device initialization, we init the rotary embeddings here, but it's fake
         # As for rotary_seq_len, these rotary embeddings are pretty small/cheap in memory,
@@ -257,7 +282,8 @@ class GPT(nn.Module):
         x = norm(x)
         for block in self.transformer.h:
             x = block(x, cos_sin, kv_cache)
-        x = norm(x)
+        x,y = self.residual_block(x, cos_sin, kv_cache)
+        x = norm(y)
 
         # Forward the lm_head (compute logits)
         softcap = 15
